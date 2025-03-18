@@ -8,7 +8,7 @@ const storage = new CloudinaryStorage({
     const folderName = req.body.folderName || 'DigitalLibrary';
     return {
       folder: folderName,
-      allowedFormats: ['jpg', 'jpeg', 'png', 'gif', 'webp']
+      allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp']
     };
   }
 });

@@ -8,25 +8,32 @@ const bookSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      required: true,
-      enum: ['misterio', 'ficción', 'aventuras', 'sátira']
+      default: 'pendiente de asignar',
+      enum: [
+        'misterio',
+        'ficción',
+        'aventuras',
+        'sátira',
+        'pendiente de asignar'
+      ]
     },
     author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Author',
-      required: true
+      default: null
     },
     year: {
-      type: Number,
-      required: true
+      type: String,
+      default: 'pendiente de asignar'
     },
     isbn: {
       type: String,
-      required: false
+      required: true,
+      unique: true
     },
     img: {
       type: String,
-      required: true
+      default: 'pendiente de asignar'
     }
   },
   { timestamps: true }

@@ -1,6 +1,6 @@
-const cloudinary = require('cloudinary').v2;
 const Book = require('../models/Book');
-const Author = require('../models/Author');
+const deleteCloudinaryImage = require('../../utils/deleteImage');
+const createBook = require('../../utils/createBook');
 
 const getBooks = async (req, res, next) => {
   try {
@@ -18,26 +18,7 @@ const postBooks = async (req, res, next) => {
     const { title, category, author, year, isbn } = req.body;
     const img = req.file?.path;
 
-    if (!img) {
-      return res
-        .status(400)
-        .json({ message: 'Es necesario incluir una imagen' });
-    }
-
-    const existingBook = await Book.findOne({ isbn });
-    if (existingBook) {
-      return res.status(400).json({
-        message: 'Este libro ya está registrado en la BBDD.'
-      });
-    }
-    const existingAuthor = await Author.findById(author);
-    if (!existingAuthor) {
-      return res.status(404).json({
-        message: 'Este autor no existe en la BBDD.'
-      });
-    }
-
-    const newBook = new Book({
+    const bookSaved = await createBook({
       title,
       category,
       author,
@@ -45,12 +26,6 @@ const postBooks = async (req, res, next) => {
       isbn,
       img
     });
-    const bookSaved = await newBook.save();
-
-    existingAuthor.books.push(bookSaved._id);
-    await existingAuthor.save();
-
-    console.log('Libro guardado:', bookSaved);
 
     return res.status(201).json(bookSaved);
   } catch (error) {
@@ -65,12 +40,11 @@ const updateBooks = async (req, res) => {
     const { id } = req.params;
     const updateData = { ...req.body };
     const book = await Book.findById(id);
+
     if (!book) return res.status(404).json({ message: 'Libro no encontrado' });
+
     if (req.file) {
-      const publicId = book.img?.split('/').slice(-2).join('/').split('.')[0];
-      if (publicId) {
-        await cloudinary.uploader.destroy(publicId);
-      }
+      await deleteCloudinaryImage(book.img);
       updateData.img = req.file.path;
     }
     const updatedBook = await Book.findByIdAndUpdate(id, updateData, {
@@ -90,13 +64,10 @@ const deleteBooks = async (req, res) => {
     const book = await Book.findById(id);
     if (!book) return res.status(404).json({ message: 'Libro no encontrado' });
 
-    const publicId = book.img?.split('/').slice(-2).join('/').split('.')[0];
-
-    if (publicId) {
-      await cloudinary.uploader.destroy(publicId);
-    }
+    await deleteCloudinaryImage(book.img);
     await Book.findByIdAndDelete(id);
-    res.status(200).json({ message: 'Libro eliminado correctamente' });
+
+    res.status(200).json({ message: 'Libro eliminado correctamente', book });
   } catch (error) {
     res
       .status(500)

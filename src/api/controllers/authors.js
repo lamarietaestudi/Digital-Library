@@ -1,5 +1,6 @@
-const cloudinary = require('cloudinary').v2;
 const Author = require('../models/Author');
+const deleteCloudinaryImage = require('../../utils/deleteImage');
+const createBook = require('../../utils/createBook');
 
 const getAuthors = async (req, res, next) => {
   try {
@@ -15,11 +16,7 @@ const getAuthors = async (req, res, next) => {
 
 const postAuthors = async (req, res, next) => {
   try {
-    const {
-      name,
-      info,
-      books: []
-    } = req.body;
+    const { name, info, books } = req.body;
     const photo = req.file?.path;
 
     if (!photo) {
@@ -44,6 +41,13 @@ const postAuthors = async (req, res, next) => {
     const newAuthor = new Author({ name, photo, info, books: [] });
     const authorSaved = await newAuthor.save();
 
+    if (books) {
+      const booksArray = JSON.parse(books);
+      for (const bookData of booksArray) {
+        await createBook({ ...bookData, author: authorSaved._id });
+      }
+    }
+
     return res.status(201).json(authorSaved);
   } catch (error) {
     return res.status(500).json({
@@ -65,14 +69,7 @@ const updateAuthors = async (req, res, next) => {
     const updateData = { ...req.body };
 
     if (req.file) {
-      const publicId = author.photo
-        ?.split('/')
-        .slice(-2)
-        .join('/')
-        .split('.')[0];
-      if (publicId) {
-        await cloudinary.uploader.destroy(publicId);
-      }
+      await deleteCloudinaryImage(author.photo);
       updateData.photo = req.file.path;
     }
 
@@ -97,15 +94,12 @@ const deleteAuthors = async (req, res, next) => {
     if (!author)
       return res.status(404).json({ message: 'Autor no encontrado.' });
 
-    const publicId = author.photo?.split('/').slice(-2).join('/').split('.')[0];
-
-    if (publicId) {
-      await cloudinary.uploader.destroy(publicId);
-    }
-
+    await deleteCloudinaryImage(author.photo);
     await Author.findByIdAndDelete(id);
 
-    return res.status(200).json({ message: 'Autor eliminado correctamente' });
+    return res
+      .status(200)
+      .json({ message: 'Autor eliminado correctamente', author });
   } catch (error) {
     return res.status(500).json({
       message: 'Error in Delete Authors controller',
